@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := app-template
+PROJECT_NAME := ssd1306-esp-idf-i2c
 
 include $(IDF_PATH)/make/project.mk
 

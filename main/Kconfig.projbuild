@@ -1,0 +1,56 @@
+#
+# Define stuff for SSD1306 radio if needed
+#
+menu "SSD1306 Configuration"
+
+    config SSD1306_I2C_ENABLED
+        bool "Enable SSD1306 display"
+        default y
+ 
+    config SSD1306_I2C_MAIN_ENABLED
+        depends on SSD1306_I2C_ENABLED
+        bool "Enable test routine"
+        default n
+
+    config SSD1306_I2C_WIDTH
+        depends on SSD1306_I2C_ENABLED
+        int "Width in pixels"
+        default 128
+
+    config SSD1306_I2C_HEIGHT
+        depends on SSD1306_I2C_ENABLED
+        int "Height in pixels"
+        default 64
+
+    config SSD1306_I2C_CHANNEL_NUMBER
+        depends on SSD1306_I2C_ENABLED
+        int "I2C channel number (0 or 1)"
+        range 0 1
+        default 0
+
+    config SSD1306_I2C_SCL_GPIO
+        depends on SSD1306_I2C_ENABLED
+        int "GPIO for SCL pin"
+        default 15
+
+    config SSD1306_I2C_SDA_GPIO
+        depends on SSD1306_I2C_ENABLED
+        int "GPIO for SDA pin"
+        default 4
+
+    config SSD1306_I2C_RESET_GPIO
+        depends on SSD1306_I2C_ENABLED
+        int "GPIO for RESET pin"
+        default 16
+
+    config SSD1306_I2C_CLK_SPEED
+        depends on SSD1306_I2C_ENABLED
+        int "I2C Clock speed"
+        default 100000
+
+    config SSD1306_I2C_ADDR
+        depends on SSD1306_I2C_ENABLED
+        hex "SSD1306 address"
+        default 0x3C
+endmenu
+
