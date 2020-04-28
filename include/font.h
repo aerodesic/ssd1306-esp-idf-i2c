@@ -9,14 +9,20 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+typedef enum {
+    font_flag_pitch    = 0x01,
+    font_flag_variable = font_flag_pitch,
+    font_flag_fixed    = 0x00,
+} font_flags_t;
+     
 typedef struct {
-    uint8_t *base;
-    bool    fixed;    /* True if fixed; otherwise a table of pointers to variable length glyphs (NYI) */
-    int     first_point;
-    int     last_point;
-    int     space_point;
-    int     width;
-    int     height;
+    uint8_t      *base;
+    font_flags_t flags;
+    int          first_point;
+    int          last_point;
+    int          space_point;
+    int          width;
+    int          height;
 } font_t;
 
 /*

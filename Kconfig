@@ -7,11 +7,6 @@ menu "SSD1306 Configuration"
         bool "Enable SSD1306 display"
         default y
  
-    config SSD1306_I2C_MAIN_ENABLED
-        depends on SSD1306_I2C_ENABLED
-        bool "Enable test routine"
-        default n
-
     config SSD1306_I2C_WIDTH
         depends on SSD1306_I2C_ENABLED
         int "Width in pixels"

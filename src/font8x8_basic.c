@@ -14,7 +14,7 @@
 /*
    Constant: font8x8_basic_tr
    Contains an 90 digree transposed 8x8 font map for unicode points 
-   U+0000 - U+007F (basic latin)
+   U+0020 - U+007F (basic latin)
    
    To make it easy to use with SSD1306's GDDRAM mapping and API,
    this constant is an 90 degree transposed.
@@ -142,7 +142,7 @@ static uint8_t font8x8_basic_tr_table[][8] = {
 
 const font_t font8x8_basic = {
     .base         = &font8x8_basic_tr_table[0][0],
-    .fixed        = true,
+    .flags        = font_flag_fixed,
     .first_point  = 0x20,
     .last_point   = 0x7F,
     .space_point  = 0x20,

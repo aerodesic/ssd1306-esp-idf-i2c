@@ -6,20 +6,19 @@
 
 int font_char_height(const font_t *font, int ch)
 {
-    int height = 0;
-
-    if (font->fixed) {
-        height = font->height;
-    }
-
-    return height;
+    return font->height;
 }
 
 int font_char_width(const font_t *font, int ch) {
     int width = 0;
 
-    if (font->fixed) {
-        width = font->width;
+    if (ch >= font->first_point && ch <= font->last_point) {
+        if ((font->flags & font_flag_pitch) == font_flag_variable) {
+            /* First byte is font width */
+            width = ((uint8_t**) (font->base))[ch - font->first_point][0];
+        } else {
+            width = font->width;
+        }
     }
 
     return width;
@@ -30,7 +29,7 @@ uint8_t *font_char(const font_t *font, int point, int *pwidth, int *pheight)
     uint8_t *glyph = NULL;
 
     if (point >= font->first_point && point <= font->last_point) {
-        if (font->fixed) {
+        if ((font->flags & font_flag_pitch) == font_flag_fixed) {
             glyph = (uint8_t*) font->base + ((point - font->first_point) * font->width);
 
             if (pwidth != NULL) {
@@ -69,6 +68,7 @@ void font_metrics(const font_t *font, const char* text, int *pwidth, int *pheigh
         if (pheight != NULL && cheight > *pheight) {
             *pheight = cheight;
         }
+        ++text;
     }
 }
 
