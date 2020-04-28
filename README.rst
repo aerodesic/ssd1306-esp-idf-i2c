@@ -1,7 +1,9 @@
 Sample code for driving 128x64 OLED display with SSD1306 driver via ESP-IDF's I2C master driver
 ====================
 
-See main code main.c_.
+This code implements a component for adding to the esp-idf environment.  It implements a simple frame buffer manager supporting, font, pixel, line and rectangle operations.  This frame buffer is expanded via a simple inheritance mechanism to include a physical driver supporting frame blit, contrast (brightness) and enable/disable.  I elected to produce my own frame buffer mechanism to avoid the extra overhead of multi-bit and color pixels.  If expansion is anticipated, it would like prove better to incorporate one of th existing open-source frame buffer managers and replace this driver.
+
+
 
 ----------
 About
