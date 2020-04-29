@@ -95,6 +95,7 @@ static void display_draw_bitmap(display_t *display, bitmap_t *bitmap, int x, int
     display->_unlock(display);
 }
 
+#if CONFIG_DISPLAY_PIXEL_ENABLED
 static void display_draw_pixel(display_t *display, int x, int y, bool set)
 {
     display->_lock(display);
@@ -113,7 +114,9 @@ static void display_draw_pixel(display_t *display, int x, int y, bool set)
 
     display->_unlock(display);
 }
+#endif
 
+#if CONFIG_DISPLAY_LINE_ENABLED
 static void display_draw_line(display_t *display, int x1, int y1, int x2, int y2, bool set)
 {
 //ESP_LOGI(TAG, "%s: %d,%d to %d,%d  dx %d dy %d d %d", __func__, x1, y1, x2, y2, dx, dy, d);
@@ -145,7 +148,9 @@ static void display_draw_line(display_t *display, int x1, int y1, int x2, int y2
 
     display->_unlock(display);
 }
+#endif
 
+#if CONFIG_DISPLAY_RECTANGLE_ENABLED
 static void display_draw_rectangle(display_t *display, int x, int y, int width, int height, draw_flags_t flags)
 {
 //ESP_LOGI(TAG, "%s: x1 %d y1 %d x2 %d y2 %d flags %02x", __func__, x1, y1, x2, y2, flags);
@@ -224,6 +229,7 @@ static void display_draw_rectangle(display_t *display, int x, int y, int width, 
 
     display->_unlock(display);
 }
+#endif
 
 /*
  * Draw text in rectangle at x, y
@@ -263,7 +269,7 @@ static void display_draw_text(display_t *display, int x, int y, const char* text
     display->_unlock(display);
 }
 
-
+#if CONFIG_DISPLAY_PROGRESS_BAR_ENABLED
 void display_draw_progress_bar(display_t *display, int x, int y, int width, int height, int range, int value, const char* text)
 {
     /* Draw surrounding border */
@@ -293,6 +299,7 @@ void display_draw_progress_bar(display_t *display, int x, int y, int width, int 
         display->show(display);
     }
 }
+#endif
 
 static void display_set_font(display_t *display, const font_t* font)
 {
@@ -342,10 +349,18 @@ static void display_init(display_t* display, int width, int height, uint8_t flag
 
     /* Optional items below */
 
+#if CONFIG_DISPLAY_RECTANGLE_ENABLED
     display->draw_rectangle       = display_draw_rectangle;
+#endif
+#if CONFIG_DISPLAY_LINE_ENABLED
     display->draw_line            = display_draw_line;
+#endif
+#if CONFIG_DISPLAY_PIXEL_ENABLED
     display->draw_pixel           = display_draw_pixel;
+#endif
+#if CONFIG_DISPLAY_PROGRESS_BAR_ENABLED
     display->draw_progress_bar    = display_draw_progress_bar;
+#endif
 
     display->mutex = xSemaphoreCreateRecursiveMutex();
 }

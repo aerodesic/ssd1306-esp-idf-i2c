@@ -54,10 +54,18 @@ typedef struct __display__ {
     void               (*set_font)(display_t *display, const font_t *font);
     const font_t*      (*get_font)(display_t *display);
     void               (*draw_bitmap)(display_t *display, bitmap_t* bitmap, int x, int y, int width, int height, bitmap_method_t method);
+#if CONFIG_DISPLAY_RECTANGLE_ENABLED
     void               (*draw_rectangle)(display_t *display, int x, int y, int width, int height, draw_flags_t flags);
+#endif
+#if CONFIG_DISPLAY_LINE_ENABLED
     void               (*draw_line)(display_t *display, int x1, int y1, int x2, int y2, bool set);
+#endif
+#if CONFIG_DISPLAY_PIXEL_ENABLED
     void               (*draw_pixel)(display_t *display, int x, int y, bool set);
+#endif
+#if CONFIG_DISPLAY_PROGRESS_BAR_ENABLED
     void               (*draw_progress_bar)(display_t *display, int x, int y, int width, int height, int total, int progress, const char* text);
+#endif
 } display_t;
 
 #define DISPLAY_FLAGS_MIRROR_X  0x01
