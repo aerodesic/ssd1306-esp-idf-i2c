@@ -35,7 +35,7 @@ static void display_clear(display_t *display)
 /*
  * Put the bitmap into the frame buffer at current x and y.  x,y is the top left corner
  */
-static void display_put_bitmap(display_t *display, uint8_t *bitmap, int width, int height, bitmap_method_t method)
+static void display_draw_bitmap(display_t *display, uint8_t *bitmap, int width, int height, bitmap_method_t method)
 {
     int b_row = 0;
     int c_row = display->y;
@@ -133,9 +133,14 @@ static void display_draw_line(display_t *display, int x1, int y1, int x2, int y2
     display->_unlock(display);
 }
 
-static void display_draw_rectangle(display_t *display, int x1, int y1, int x2, int y2, draw_flags_t flags)
+static void display_draw_rectangle(display_t *display, int x, int y, int width, int height, draw_flags_t flags)
 {
 //ESP_LOGI(TAG, "%s: x1 %d y1 %d x2 %d y2 %d flags %02x", __func__, x1, y1, x2, y2, flags);
+
+    int x1 = x;
+    int x2 = x + width - 1;
+    int y1 = y;
+    int y2 = y + height - 1;
 
     if (x1 < 0) {
         x1 = 0;
@@ -203,7 +208,7 @@ static void display_write_text(display_t *display, const char* text)
                 ++text;
             }
         } else if (pchar != NULL) {
-            display_put_bitmap(display, pchar, char_width, char_height, bitmap_method_XOR);
+            display_draw_bitmap(display, pchar, char_width, char_height, bitmap_method_XOR);
             display->x += char_width;
             ++text;
         }
@@ -229,6 +234,38 @@ static void display_set_xy(display_t* display, int x, int y)
 
     display->_unlock(display);
 }
+
+void display_draw_progress_bar(display_t *display, int x, int y, int width, int height, int range, int value, const char* text)
+{
+    /* Draw surrounding border */
+    display->draw_rectangle(display, x, y, width, height, draw_flag_border);
+
+    /* Make smaller rectangle for the moving bar */
+    x += 1;
+    y += 1;
+    width -= 2;
+    height -= 2;
+
+    int bar = ((width - 1) * value) / range;
+
+    /* Paint the Progress part */
+    display->draw_rectangle(display, x, y, bar, height, draw_flag_fill);
+
+    /* Paint the non-progress part */
+    if (range != value) {
+        display->draw_rectangle(display, x + bar, y, width - bar, height, draw_flag_clear);
+    }
+
+    if (text != NULL) {
+        int cwidth, cheight;
+        font_metrics(display->font, text, &cwidth, &cheight);
+        display->set_xy(display, x + width/2 - cwidth/2, y + height/2 -  cheight/2);
+        display->write_text(display, text);
+    } else {
+        display->show(display);
+    }
+}
+
 
 static void display_get_xy(display_t* display, int *x, int *y)
 {
@@ -265,29 +302,30 @@ static void display_close(display_t* display)
 static void display_init(display_t* display, int width, int height, uint8_t flags)
 {
     /* Create the frame buffer */
-    display->frame_len        = (width * height) / 8;
-    display->frame_buf        = (uint8_t *) malloc(display->frame_len);
+    display->frame_len            = (width * height) / 8;
+    display->frame_buf            = (uint8_t *) malloc(display->frame_len);
 
     memset(display->frame_buf, 0, display->frame_len);
 
-    display->width            = width;
-    display->height           = height;
-    display->flags            = flags;
+    display->width                = width;
+    display->height               = height;
+    display->flags                = flags;
 
-    display->_lock            = display_lock;
-    display->_unlock          = display_unlock;
+    display->_lock                = display_lock;
+    display->_unlock              = display_unlock;
 
-    display->close            = display_close;
-    display->set_xy           = display_set_xy;
-    display->get_xy           = display_get_xy;
-    display->set_font         = display_set_font;
-    display->get_font         = display_get_font;
-    display->clear            = display_clear;
-    display->write_text       = display_write_text;
-    display->put_bitmap       = display_put_bitmap;
-    display->draw_rectangle   = display_draw_rectangle;
-    display->draw_line        = display_draw_line;
-    display->draw_pixel       = display_draw_pixel;
+    display->close                = display_close;
+    display->set_xy               = display_set_xy;
+    display->get_xy               = display_get_xy;
+    display->set_font             = display_set_font;
+    display->get_font             = display_get_font;
+    display->clear                = display_clear;
+    display->write_text           = display_write_text;
+    display->draw_bitmap          = display_draw_bitmap;
+    display->draw_rectangle       = display_draw_rectangle;
+    display->draw_line            = display_draw_line;
+    display->draw_pixel           = display_draw_pixel;
+    display->draw_progress_bar    = display_draw_progress_bar;
 
     display->mutex = xSemaphoreCreateRecursiveMutex();
 }
