@@ -33,50 +33,63 @@ static void display_clear(display_t *display)
 }
 
 /*
- * Put the bitmap into the frame buffer at current x and y.  x,y is the top left corner
+ * Put the bitmap into the frame buffer at x, y.  x,y is the top left corner
+ * (x, y, width, height) are the dimensions of the region to be overlayed with the bitmap.
+ * Extra space is ignore.  Insufficient space causes truncation.
  */
-static void display_draw_bitmap(display_t *display, uint8_t *bitmap, int width, int height, bitmap_method_t method)
+static void display_draw_bitmap(display_t *display, bitmap_t *bitmap, int x, int y, int width, int height, bitmap_method_t method)
 {
-    int b_row = 0;
-    int c_row = display->y;
+    //static uint8_t masks[] = { 0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, };
+    static uint8_t masks[] = { 0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, };
+
+    int bitmap_row = 0;
+    int target_row = y;
+
+    int end_x = x + width - 1;
+    int end_y = y + height - 1;
 
     bool odd = true;
 
     display->_lock(display);
 
-    while (height != 0) {
-        /* Compute byte shift and mask */
-        int shift = (b_row + c_row) % 8;  /* Starting row at this y interval */
+    int bitmap_height = bitmap->height;
 
-//ESP_LOGI(TAG, "%s: height %d b_row %d c_row %d odd %s shift %d", __func__, height, b_row, c_row, odd ? "ODD left" : "EVEN right", shift);
+    while (bitmap_height > 0) {
+        /* Compute byte shift and mask */
+        int shift = (bitmap_row + target_row) % 8;  /* Starting row at this y interval */
+
+//ESP_LOGI(TAG, "%s: bitmap_height %d height %d bitmap_row %d target_row %d odd %s shift %d", __func__, bitmap_height, height, bitmap_row, target_row, odd ? "ODD left" : "EVEN right", shift);
 
         /* Do one row */
-        for (int x = 0; x < width; ++x) {
-            uint8_t value = bitmap[width * (b_row/8) + x];
+        for (int bx = 0; bx < bitmap->width && (bx + x) < end_x; ++bx) {
+            uint8_t value = bitmap->bits != NULL ? bitmap->bits[bitmap->width * (bitmap_row/8) + bx] : 0xFF;
+            uint8_t mask = ((end_y - target_row + 1) < 8) ? mask = masks[end_y - target_row + 1] : 0xFF;
+
             if (odd) {
-                value <<= shift;
+                value = (value & mask) << shift;
             } else {
-                value >>= shift;
+                value = (value >> shift) & mask;
             }
 
-            uint8_t *byte = &display->frame_buf[(c_row / 8) * display->width + display->x + x];
+            uint8_t *byte = &display->frame_buf[(target_row / 8) * display->width + x + bx];
 
             if (method == bitmap_method_XOR) {
                 *byte ^= value;
+            } else if (method == bitmap_method_NAND) {
+                *byte &= ~value;
             } else {
                 *byte |= value;
             }
-
         }
 
         odd = !odd;
 
         /* Move to the  next bitmap row */
-        b_row += (8 - shift);
-        c_row += (8 - shift);
+        bitmap_row += (8 - shift);
+        target_row += (8 - shift);
 
-        /* Remove from the heigth required */
-        height -= (8 - shift);
+        /* Remove from the height required */
+        bitmap_height -= (8 - shift);
     }
 
     display->_unlock(display);
@@ -179,38 +192,69 @@ static void display_draw_rectangle(display_t *display, int x, int y, int width, 
         y2--;
     }
         
+//    if (flags & (draw_flag_fill | draw_flag_clear)) {
+//        for (int y = y1; y <= y2; ++y) {
+//            display_draw_line(display, x1, y, x2, y, !(flags & draw_flag_clear));
+//        } 
+//    }
+
     if (flags & (draw_flag_fill | draw_flag_clear)) {
-        for (int y = y1; y <= y2; ++y) {
-            display_draw_line(display, x1, y, x2, y, !(flags & draw_flag_clear));
-        } 
+        /* When  the bits pointer is 0, the bitmap is full of ones */
+        bitmap_t bitmap = {
+            .bits = NULL,
+            .width =  width,
+            .height = height,
+        };
+
+        bitmap_method_t method = (flags & draw_flag_clear) ? bitmap_method_NAND : bitmap_method_OR;
+
+        display->draw_bitmap(display, &bitmap, x, y, width, height, method);
+//        int y = y1;
+//        while (y <= y2) {
+//            int x = x1;
+//
+//            while (x <= x2) {
+//               display->draw_bitmap(display, &bitmap, x, y, width - (x - x1), height - (y - y1), method);
+//               x += bitmap.width;
+//            } 
+//
+//            y += bitmap.height;
+//        } 
     }
 
     display->_unlock(display);
 }
 
-static void display_write_text(display_t *display, const char* text)
+/*
+ * Draw text in rectangle at x, y
+ */
+static void display_draw_text(display_t *display, int x, int y, const char* text)
 {
     display->_lock(display);
 
-    while (*text != '\0') {
-        int char_height;
-        int char_width;
+    int textx = x;
+    int texty = y;
 
-        uint8_t *pchar = font_char(display->font, *text, &char_width, &char_height);
-        if (display->x + char_width > display->width || *text == '\n') {
-            /* Advance a line */
-            display->y += display->font_height;
+    while (*text != '\0' && textx < display->width - 1) {
+        bitmap_t bitmap;
 
-            /* Reset X */
-            display->x = 0;
+        if (char_to_bitmap(&bitmap, display->font, *text)) {
 
-            if (*text == '\n') {
+            if (textx + bitmap.width >= display->width || *text == '\n') {
+                /* Advance a line */
+                texty += display->font_height;
+
+                /* Reset X */
+                textx = x;
+
+                if (*text == '\n') {
+                    ++text;
+                }
+            } else {
+                display_draw_bitmap(display, &bitmap, textx, texty, bitmap.width, bitmap.height, bitmap_method_XOR);
+                textx += bitmap.width;
                 ++text;
             }
-        } else if (pchar != NULL) {
-            display_draw_bitmap(display, pchar, char_width, char_height, bitmap_method_XOR);
-            display->x += char_width;
-            ++text;
         }
     }
 
@@ -219,21 +263,6 @@ static void display_write_text(display_t *display, const char* text)
     display->_unlock(display);
 }
 
-
-static void display_set_xy(display_t* display, int x, int y)
-{
-    display->_lock(display);
-
-    if (x >= 0) {
-        display->x = x;
-    }
-
-    if (y >= 0) {
-        display->y = y;
-    }
-
-    display->_unlock(display);
-}
 
 void display_draw_progress_bar(display_t *display, int x, int y, int width, int height, int range, int value, const char* text)
 {
@@ -258,21 +287,11 @@ void display_draw_progress_bar(display_t *display, int x, int y, int width, int 
 
     if (text != NULL) {
         int cwidth, cheight;
-        font_metrics(display->font, text, &cwidth, &cheight);
-        display->set_xy(display, x + width/2 - cwidth/2, y + height/2 -  cheight/2);
-        display->write_text(display, text);
+        text_metrics(display->font, text, &cwidth, &cheight);
+        display->draw_text(display, x + width/2 - cwidth/2, y + height/2 - cheight/2, text);
     } else {
         display->show(display);
     }
-}
-
-
-static void display_get_xy(display_t* display, int *x, int *y)
-{
-    display->_lock(display);
-    *x = display->x;
-    *y = display->y;
-    display->_unlock(display);
 }
 
 static void display_set_font(display_t *display, const font_t* font)
@@ -282,7 +301,7 @@ static void display_set_font(display_t *display, const font_t* font)
     display->font = font;
 
     /* Get a representative height */
-    display->font_height = font_char_height(display->font, ' ');
+    display->font_height = display->font->height;
 
     display->_unlock(display);
 }
@@ -315,13 +334,14 @@ static void display_init(display_t* display, int width, int height, uint8_t flag
     display->_unlock              = display_unlock;
 
     display->close                = display_close;
-    display->set_xy               = display_set_xy;
-    display->get_xy               = display_get_xy;
     display->set_font             = display_set_font;
     display->get_font             = display_get_font;
     display->clear                = display_clear;
-    display->write_text           = display_write_text;
+    display->draw_text            = display_draw_text;
     display->draw_bitmap          = display_draw_bitmap;
+
+    /* Optional items below */
+
     display->draw_rectangle       = display_draw_rectangle;
     display->draw_line            = display_draw_line;
     display->draw_pixel           = display_draw_pixel;

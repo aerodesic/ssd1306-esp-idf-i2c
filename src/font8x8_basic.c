@@ -23,7 +23,7 @@
 
    Conversion is done via following procedure:
    
-	for (int code = 0; code < 128; code++) {
+	for (int code = ' '; code < 128; code++) {
 		uint8_t trans[8];
 		for (int w = 0; w < 8; w++) {
 			trans[w] = 0x00;
@@ -33,7 +33,7 @@
 		}
 	
 		for (int w = 0; w < 8; w++) {
-			if (w == 0) { printf("    { "); }
+			if (w == 0) { printf("    { 8, 8, "); }
 			printf("0x%.2X", trans[w]);
 			if (w < 7) { printf(", "); }
 			if (w == 7) { printf(" },   // U+00%.2X (%c)\n", code, code); }
@@ -143,9 +143,9 @@ static uint8_t font8x8_basic_tr_table[][8] = {
 const font_t font8x8_basic = {
     .base         = &font8x8_basic_tr_table[0][0],
     .flags        = font_flag_fixed,
-    .first_point  = 0x20,
-    .last_point   = 0x7F,
-    .space_point  = 0x20,
+    .first_ch     = 0x20,
+    .last_ch      = 0x7F,
+    .space_ch     = 0x20,
     .width        = 8,
     .height       = 8,
 };

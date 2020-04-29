@@ -4,41 +4,20 @@
 #include <sys/types.h>
 #include "font.h"
 
-int font_char_height(const font_t *font, int ch)
-{
-    return font->height;
-}
-
-int font_char_width(const font_t *font, int ch) {
-    int width = 0;
-
-    if (ch >= font->first_point && ch <= font->last_point) {
-        if ((font->flags & font_flag_pitch) == font_flag_variable) {
-            /* First byte is font width */
-            width = ((uint8_t**) (font->base))[ch - font->first_point][0];
-        } else {
-            width = font->width;
-        }
-    }
-
-    return width;
-}
-
-uint8_t *font_char(const font_t *font, int point, int *pwidth, int *pheight)
+uint8_t *char_to_bitmap(bitmap_t *bitmap, const font_t *font, int ch)
 {
     uint8_t *glyph = NULL;
 
-    if (point >= font->first_point && point <= font->last_point) {
+    if (ch >= font->first_ch && ch <= font->last_ch) {
         if ((font->flags & font_flag_pitch) == font_flag_fixed) {
-            glyph = (uint8_t*) font->base + ((point - font->first_point) * font->width);
+            bitmap->bits = (uint8_t*) font->base + ((ch - font->first_ch) * font->width);
 
-            if (pwidth != NULL) {
-                *pwidth = font_char_width(font, point);
-            }
+            /* These need to change for variable pitch fonts */
+            bitmap->width = font->width;
+            bitmap->height = font->height;
 
-            if (pheight != NULL) {
-                *pheight = font_char_width(font, point);
-            }
+            /* Return the bit array for the glyph */
+            glyph = bitmap->bits;
         } else {
             /* Need to do something for variable pitch fonts */
         }
@@ -47,7 +26,7 @@ uint8_t *font_char(const font_t *font, int point, int *pwidth, int *pheight)
     return glyph;
 }
 
-void font_metrics(const font_t *font, const char* text, int *pwidth, int *pheight)
+void text_metrics(const font_t *font, const char* text, int *pwidth, int *pheight)
 {
     if (pwidth != NULL) {
         *pwidth = 0;
@@ -58,8 +37,9 @@ void font_metrics(const font_t *font, const char* text, int *pwidth, int *pheigh
     }
 
     while (*text != 0) {
-        int cwidth = font_char_width(font, *text);
-        int cheight = font_char_height(font, *text);
+        /* Need to change for variable pitch fonts */
+        int cwidth = font->width;
+        int cheight = font->height;
 
         if (pwidth != NULL) {
             *pwidth += cwidth;
