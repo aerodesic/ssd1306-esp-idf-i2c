@@ -32,6 +32,21 @@ static void display_clear(display_t *display)
     memset(display->frame_buf, 0, display->frame_len);
 }
 
+static void display_hold(display_t *display)
+{
+    display->hold_count++;
+}
+
+static void display_show(display_t *display)
+{
+    if (display->hold_count > 0) {
+        display->hold_count--;
+    }
+    if (display->hold_count == 0) {
+        display->_show(display);
+    }
+}
+
 /*
  * Put the bitmap into the frame buffer at x, y.  x,y is the top left corner
  * (x, y, width, height) are the dimensions of the region to be overlayed with the bitmap.
@@ -51,6 +66,8 @@ static void display_draw_bitmap(display_t *display, bitmap_t *bitmap, int x, int
     bool odd = true;
 
     display->_lock(display);
+
+    display->hold(display);
 
     int bitmap_height = bitmap->height;
 
@@ -92,6 +109,8 @@ static void display_draw_bitmap(display_t *display, bitmap_t *bitmap, int x, int
         bitmap_height -= (8 - shift);
     }
 
+    display->show(display);
+
     display->_unlock(display);
 }
 
@@ -99,6 +118,8 @@ static void display_draw_bitmap(display_t *display, bitmap_t *bitmap, int x, int
 static void display_draw_pixel(display_t *display, int x, int y, bool set)
 {
     display->_lock(display);
+
+    display->hold(display);
 
 //ESP_LOGI(TAG, "%s: %d,%d %s", __func__, x, y, set ? "SET" : "CLEAR");
 
@@ -112,6 +133,8 @@ static void display_draw_pixel(display_t *display, int x, int y, bool set)
         }
     }
 
+    display->show(display);
+
     display->_unlock(display);
 }
 #endif
@@ -122,6 +145,8 @@ static void display_draw_line(display_t *display, int x1, int y1, int x2, int y2
 //ESP_LOGI(TAG, "%s: %d,%d to %d,%d  dx %d dy %d d %d", __func__, x1, y1, x2, y2, dx, dy, d);
 
     display->_lock(display);
+
+    display->hold(display);
 
     int dx =  abs(x2-x1);
     int sx = x1<x2 ? 1 : -1;
@@ -145,6 +170,8 @@ static void display_draw_line(display_t *display, int x1, int y1, int x2, int y2
             }
         }
     } while (x1 != x2 || y1 != y2);
+
+    display->show(display);
 
     display->_unlock(display);
 }
@@ -186,6 +213,8 @@ static void display_draw_rectangle(display_t *display, int x, int y, int width, 
 
     display->_lock(display);
     
+    display->hold(display);
+
     if (flags & draw_flag_border) {
         display_draw_line(display, x1, y1, x2, y1, !(flags & draw_flag_clear));
         display_draw_line(display, x2, y1, x2, y2, !(flags & draw_flag_clear));
@@ -227,6 +256,8 @@ static void display_draw_rectangle(display_t *display, int x, int y, int width, 
 //        } 
     }
 
+    display->show(display);
+
     display->_unlock(display);
 }
 #endif
@@ -237,6 +268,8 @@ static void display_draw_rectangle(display_t *display, int x, int y, int width, 
 static void display_draw_text(display_t *display, int x, int y, const char* text)
 {
     display->_lock(display);
+
+    display->hold(display);
 
     int textx = x;
     int texty = y;
@@ -283,6 +316,8 @@ void display_draw_progress_bar(display_t *display, int x, int y, int width, int 
 
     int bar = ((width - 1) * value) / range;
 
+    display->hold(display);
+
     /* Paint the Progress part */
     display->draw_rectangle(display, x, y, bar, height, draw_flag_fill);
 
@@ -295,9 +330,9 @@ void display_draw_progress_bar(display_t *display, int x, int y, int width, int 
         int cwidth, cheight;
         text_metrics(display->font, text, &cwidth, &cheight);
         display->draw_text(display, x + width/2 - cwidth/2, y + height/2 - cheight/2, text);
-    } else {
-        display->show(display);
     }
+
+    display->show(display);
 }
 #endif
 
@@ -340,6 +375,8 @@ static void display_init(display_t* display, int width, int height, uint8_t flag
     display->_lock                = display_lock;
     display->_unlock              = display_unlock;
 
+    display->hold                 = display_hold;
+    display->show                 = display_show;
     display->close                = display_close;
     display->set_font             = display_set_font;
     display->get_font             = display_get_font;

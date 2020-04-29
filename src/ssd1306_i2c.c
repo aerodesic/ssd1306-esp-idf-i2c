@@ -282,7 +282,7 @@ ESP_LOGI(TAG, "%s: i2c_num %d sda_pin %d scl_pin %d reset_pin %d clk_speed %d wi
         /* Plug override for close */
         driver_info->close     = display->close;
 
-        display->show          = ssd1306_i2c_show;
+        display->_show         = ssd1306_i2c_show;
 
         display->close         = ssd1306_i2c_close;
 

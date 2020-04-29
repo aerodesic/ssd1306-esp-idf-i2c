@@ -32,9 +32,7 @@ typedef struct __display__ {
     int                width;
     int                height;
 
-    /* Current position */
-    int                x;
-    int                y;
+    int                hold_count;
 
     /* Currently selected font */
     const font_t       *font;
@@ -43,10 +41,12 @@ typedef struct __display__ {
     /* Private - not meant for user calls */
     void               (*_lock)(display_t *display);
     void               (*_unlock)(display_t *display);
+    void               (*_show)(display_t *display);
 
     /* User entry points */
     void               (*close)(display_t *display);
     void               (*clear)(display_t *display);
+    void               (*hold)(display_t *display);
     void               (*show)(display_t *display);
     void               (*contrast)(display_t *display, int setting);
     void               (*draw_text)(display_t *display, int x, int y, const char* text);
