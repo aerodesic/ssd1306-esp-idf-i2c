@@ -6,6 +6,7 @@
 #if CONFIG_SSD1306_I2C_ENABLED
 
 #include <string.h>
+#include <stdarg.h>
 
 #include "driver/gpio.h"
 #include "driver/i2c.h"
@@ -265,7 +266,7 @@ static void display_draw_rectangle(display_t *display, int x, int y, int width, 
 /*
  * Draw text in rectangle at x, y
  */
-static void display_draw_text(display_t *display, int x, int y, const char* text)
+static void display_draw_text(display_t *display, int x, int y, const char* fmt, ...)
 {
     display->_lock(display);
 
@@ -273,6 +274,14 @@ static void display_draw_text(display_t *display, int x, int y, const char* text
 
     int textx = x;
     int texty = y;
+
+    char *buffer;
+    va_list ap;
+    va_start(ap, fmt);
+    vasprintf(&buffer, fmt, ap);
+    va_end(ap);
+
+    char* text = buffer;
 
     while (*text != '\0' && textx < display->width - 1) {
         bitmap_t bitmap;
@@ -296,6 +305,8 @@ static void display_draw_text(display_t *display, int x, int y, const char* text
             }
         }
     }
+
+    free((void*) buffer);
 
     display->show(display);
 
@@ -329,7 +340,7 @@ void display_draw_progress_bar(display_t *display, int x, int y, int width, int 
     if (text != NULL) {
         int cwidth, cheight;
         text_metrics(display->font, text, &cwidth, &cheight);
-        display->draw_text(display, x + width/2 - cwidth/2, y + height/2 - cheight/2, text);
+        display->draw_text(display, x + width/2 - cwidth/2, y + height/2 - cheight/2, "%s", text);
     }
 
     display->show(display);
