@@ -113,8 +113,9 @@ void ssd1306_i2c_init(display_t* display)
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, SSD1306_CMD_SET_COM_PIN_MAP, true));
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, display->height == 32 ? 0x10 : 0x12, true)); // 0x10 if 32 lines else 0x12
 
+    /* Initial brightness as 0 so old stuff doesn't get displayed */
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, SSD1306_CMD_SET_CONTRAST, true));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x80, true));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0, true));
 
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, SSD1306_CMD_DISPLAY_RAM, true));
 
@@ -276,9 +277,6 @@ ESP_LOGI(TAG, "%s: i2c_num %d sda_pin %d scl_pin %d reset_pin %d clk_speed %d wi
         ESP_LOGI(TAG, "%s: initializing display", __func__);
         ssd1306_i2c_init(display);
 
-        /* Clear the display */
-        display->clear(display);
-
         /* Plug override for close */
         driver_info->close     = display->close;
 
@@ -288,6 +286,12 @@ ESP_LOGI(TAG, "%s: i2c_num %d sda_pin %d scl_pin %d reset_pin %d clk_speed %d wi
 
         display->contrast      = ssd1306_i2c_contrast;
         display->enable        = ssd1306_i2c_enable;
+
+        /* Clear the display */
+        display->clear(display);
+
+        display->contrast(display, 0x80);
+
     }
 
     ESP_LOGI(TAG, "%s: returning %p", __func__, display);
