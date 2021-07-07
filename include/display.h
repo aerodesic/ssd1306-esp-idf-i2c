@@ -51,7 +51,7 @@ typedef struct __display__ {
     void               (*hold)(display_t *display);
     void               (*show)(display_t *display);
     void               (*contrast)(display_t *display, int setting);
-    void               (*draw_text)(display_t *display, int x, int y, const char* fmt, ...);
+    void               (*draw_text)(display_t *display, int x, int y, const char* text);
     void               (*enable)(display_t *display, bool enable);
     void               (*set_font)(display_t *display, const font_t *font);
     const font_t*      (*get_font)(display_t *display);

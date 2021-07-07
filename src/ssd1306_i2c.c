@@ -35,7 +35,7 @@ static void ssd1306_i2c_reset(display_t *display)
 
     ssd1306_i2c_driver_info* driver_info = (ssd1306_i2c_driver_info*) (display->driver_info);
 
-//ESP_LOGI(TAG, "%s: reset_pin %d", __func__, driver_info->reset_pin);
+ESP_LOGI(TAG, "%s: reset_pin %d", __func__, driver_info->reset_pin);
 
     gpio_set_level(driver_info->reset_pin, 0);
     vTaskDelay(pdMS_TO_TICKS(20));
@@ -50,7 +50,7 @@ static void i2c_master_init(display_t* display, int i2c_num, int sda_pin, int sc
 {
     ssd1306_i2c_driver_info* driver_info = (ssd1306_i2c_driver_info*) (display->driver_info);
 
-//ESP_LOGI(TAG, "%s: i2c_num %d  sda_pin %d  scl_pin %d  reset_pin %d  clk_speed %d", __func__, i2c_num, sda_pin, scl_pin, reset_pin, clk_speed);
+ESP_LOGI(TAG, "%s: i2c_num %d  sda_pin %d  scl_pin %d  reset_pin %d  clk_speed %d", __func__, i2c_num, sda_pin, scl_pin, reset_pin, clk_speed);
 
     i2c_config_t i2c_config = {
         .mode = I2C_MODE_MASTER,
@@ -84,8 +84,6 @@ static void i2c_master_init(display_t* display, int i2c_num, int sda_pin, int sc
 
 void ssd1306_i2c_init(display_t* display)
 {
-    esp_err_t espRc;
-
     display->_lock(display);
 
     ssd1306_i2c_driver_info* driver_info = (ssd1306_i2c_driver_info*) (display->driver_info);
@@ -141,10 +139,10 @@ void ssd1306_i2c_init(display_t* display)
 
     ESP_ERROR_CHECK(i2c_master_stop(cmd));
 
-//ESP_LOGI(TAG, "%s: i2c_num %d cmd %p port tick period %d", __func__, driver_info->i2c_num, cmd, portTICK_PERIOD_MS);
+ESP_LOGI(TAG, "%s: i2c_num %d cmd %p port tick period %d", __func__, driver_info->i2c_num, cmd, portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(i2c_master_cmd_begin(driver_info->i2c_num, cmd, 1000/portTICK_PERIOD_MS));
-//    espRc = i2c_master_cmd_begin(driver_info->i2c_num, cmd, 10/portTICK_PERIOD_MS);
+//    esp_error_t espRc = i2c_master_cmd_begin(driver_info->i2c_num, cmd, 10/portTICK_PERIOD_MS);
 //
 //    if (espRc == ESP_OK) {
 //        ESP_LOGI(TAG, "%s: OLED configured successfully", __func__);
@@ -217,14 +215,16 @@ static void ssd1306_i2c_show(display_t* display)
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
-    i2c_master_start(cmd);
+ESP_LOGI(TAG, "%s: cmd %p,  %d bytes", __func__, cmd, display->frame_len);
 
-    i2c_master_write_byte(cmd, (CONFIG_SSD1306_I2C_ADDR << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, SSD1306_CONTROL_BYTE_DATA_STREAM, true);
-    i2c_master_write(cmd, display->frame_buf, display->frame_len, true);
+    ESP_ERROR_CHECK(i2c_master_start(cmd));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (CONFIG_SSD1306_I2C_ADDR << 1) | I2C_MASTER_WRITE, true));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, SSD1306_CONTROL_BYTE_DATA_STREAM, true));
+    ESP_ERROR_CHECK(i2c_master_write(cmd, display->frame_buf, display->frame_len, true));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd));
 
-    i2c_master_stop(cmd);
-    i2c_master_cmd_begin(driver_info->i2c_num, cmd, 10/portTICK_PERIOD_MS);
+    ESP_ERROR_CHECK(i2c_master_cmd_begin(driver_info->i2c_num, cmd, 10/portTICK_PERIOD_MS));
+
     i2c_cmd_link_delete(cmd);
 
     display->_unlock(display);
@@ -271,7 +271,7 @@ ESP_LOGI(TAG, "%s: i2c_num %d sda_pin %d scl_pin %d reset_pin %d clk_speed %d wi
         /* Assign a default font */
         display->set_font(display, &font8x8_basic);
 
-        ESP_LOGI(TAG, "%s: initializing i2c", __func__);
+        ESP_LOGI(TAG, "%s: initializing i2c num %d sda %d scl %d reset %d speed %d", __func__, i2c_num, sda_pin, scl_pin, reset_pin, clk_speed);
         i2c_master_init(display, i2c_num, sda_pin, scl_pin, reset_pin, clk_speed);
 
         ESP_LOGI(TAG, "%s: initializing display", __func__);

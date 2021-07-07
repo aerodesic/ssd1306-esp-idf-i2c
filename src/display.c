@@ -16,7 +16,7 @@
 
 #include "display.h"
 
-#define TAG "DISPLAY"
+#define TAG "display"
 
 static void display_lock(display_t* display)
 {
@@ -76,7 +76,7 @@ static void display_draw_bitmap(display_t *display, bitmap_t *bitmap, int x, int
         /* Compute byte shift and mask */
         int shift = (bitmap_row + target_row) % 8;  /* Starting row at this y interval */
 
-//ESP_LOGI(TAG, "%s: bitmap_height %d height %d bitmap_row %d target_row %d odd %s shift %d", __func__, bitmap_height, height, bitmap_row, target_row, odd ? "ODD left" : "EVEN right", shift);
+ESP_LOGI(TAG, "%s: bitmap_height %d height %d bitmap_row %d col %d target_row %d odd %s shift %d", __func__, bitmap_height, height, bitmap_row, x, target_row, odd ? "ODD left" : "EVEN right", shift);
 
         /* Do one row */
         for (int bx = 0; bx < bitmap->width && (bx + x) < end_x; ++bx) {
@@ -122,7 +122,7 @@ static void display_draw_pixel(display_t *display, int x, int y, bool set)
 
     display->hold(display);
 
-//ESP_LOGI(TAG, "%s: %d,%d %s", __func__, x, y, set ? "SET" : "CLEAR");
+ESP_LOGI(TAG, "%s: %d,%d %s", __func__, x, y, set ? "DRAW" : "ERASE");
 
     if (x >= 0 && x < display->width && y >= 0 && y < display->height) {
         uint8_t *byte = &display->frame_buf[(y/8) * display->width + x];
@@ -143,7 +143,7 @@ static void display_draw_pixel(display_t *display, int x, int y, bool set)
 #if CONFIG_DISPLAY_LINE_ENABLED
 static void display_draw_line(display_t *display, int x1, int y1, int x2, int y2, bool set)
 {
-//ESP_LOGI(TAG, "%s: %d,%d to %d,%d  dx %d dy %d d %d", __func__, x1, y1, x2, y2, dx, dy, d);
+ESP_LOGI(TAG, "%s: %d,%d to %d,%d  set %s", __func__, x1, y1, x2, y2, set ? "DRAW" : "ERASE");
 
     display->_lock(display);
 
@@ -181,7 +181,7 @@ static void display_draw_line(display_t *display, int x1, int y1, int x2, int y2
 #if CONFIG_DISPLAY_RECTANGLE_ENABLED
 static void display_draw_rectangle(display_t *display, int x, int y, int width, int height, draw_flags_t flags)
 {
-//ESP_LOGI(TAG, "%s: x1 %d y1 %d x2 %d y2 %d flags %02x", __func__, x1, y1, x2, y2, flags);
+ESP_LOGI(TAG, "%s: x %d y %d width %d height %d flags %02x", __func__, x, y, width, height, flags);
 
     int x1 = x;
     int x2 = x + width - 1;
@@ -266,7 +266,7 @@ static void display_draw_rectangle(display_t *display, int x, int y, int width, 
 /*
  * Draw text in rectangle at x, y
  */
-static void display_draw_text(display_t *display, int x, int y, const char* fmt, ...)
+static void display_draw_text(display_t *display, int x, int y, const char* text)
 {
     display->_lock(display);
 
@@ -274,14 +274,6 @@ static void display_draw_text(display_t *display, int x, int y, const char* fmt,
 
     int textx = x;
     int texty = y;
-
-    char *buffer;
-    va_list ap;
-    va_start(ap, fmt);
-    vasprintf(&buffer, fmt, ap);
-    va_end(ap);
-
-    char* text = buffer;
 
     while (*text != '\0' && textx < display->width - 1) {
         bitmap_t bitmap;
@@ -298,15 +290,13 @@ static void display_draw_text(display_t *display, int x, int y, const char* fmt,
                 if (*text == '\n') {
                     ++text;
                 }
-            } else {
+            } else if (texty + bitmap.height <= display->height) {
                 display_draw_bitmap(display, &bitmap, textx, texty, bitmap.width, bitmap.height, bitmap_method_XOR);
                 textx += bitmap.width;
                 ++text;
             }
         }
     }
-
-    free((void*) buffer);
 
     display->show(display);
 
@@ -340,7 +330,7 @@ void display_draw_progress_bar(display_t *display, int x, int y, int width, int 
     if (text != NULL) {
         int cwidth, cheight;
         text_metrics(display->font, text, &cwidth, &cheight);
-        display->draw_text(display, x + width/2 - cwidth/2, y + height/2 - cheight/2, "%s", text);
+        display->draw_text(display, x + width/2 - cwidth/2, y + height/2 - cheight/2, text);
     }
 
     display->show(display);
@@ -376,6 +366,8 @@ static void display_init(display_t* display, int width, int height, uint8_t flag
     /* Create the frame buffer */
     display->frame_len            = (width * height) / 8;
     display->frame_buf            = (uint8_t *) malloc(display->frame_len);
+
+ESP_LOGI(TAG, "%s: frame_buf is %p", __func__, display->frame_buf);
 
     memset(display->frame_buf, 0, display->frame_len);
 
@@ -415,16 +407,18 @@ static void display_init(display_t* display, int width, int height, uint8_t flag
 
 display_t *display_create(int width, int height, uint8_t flags)
 {
-    //ESP_LOGI(TAG, "%s: display_create %d,%d flags %02x", __func__, width, height, flags);
+ESP_LOGI(TAG, "%s: display_create %d,%d flags %02x", __func__, width, height, flags);
 
     display_t *display = (display_t*) malloc(sizeof(display_t));
+
+ESP_LOGI(TAG, "%s: display is %p", __func__, display);
 
     if (display != NULL) {
         memset(display, 0, sizeof(*display));
         display_init(display, width, height, flags);
     }
 
-    //ESP_LOGI(TAG, "%s: returning %p", __func__, display);
+ESP_LOGI(TAG, "%s: returning %p", __func__, display);
 
     return display;
 }
